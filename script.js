@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         discountLineElem = document.querySelector(".discount-line"),
         totalElem = document.getElementById("cart-total");
     const finishOrderBtn = document.getElementById("finish-order-btn");
+    // Carrinho em duas etapas: 1) só os itens, 2) dados de entrega/retirada + pagamento
+    const cartStep1 = document.getElementById("cart-step-1"),
+        cartStep2 = document.getElementById("cart-step-2"),
+        stepIndicator1 = document.getElementById("step-indicator-1"),
+        stepIndicator2 = document.getElementById("step-indicator-2"),
+        continuarDadosBtn = document.getElementById("continuar-dados-btn"),
+        voltarCarrinhoBtn = document.getElementById("voltar-carrinho-btn"),
+        subtotalStep1Elem = document.getElementById("cart-subtotal-step1"),
+        totalStep1Elem = document.getElementById("cart-total-step1");
     // Seletores da barra inferior
     const viewCartBanner = document.querySelector(".view-cart-banner");
     const bannerTotalElem = document.getElementById("banner-total");
@@ -201,6 +210,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         cartSidebar.classList.remove("show");
         cartOverlay.classList.remove("show");
         unlockScroll();
+    };
+
+    const irParaEtapaDados = () => {
+        if (!carrinho.length) return;
+        cartStep1.style.display = "none";
+        cartStep2.style.display = "flex";
+        stepIndicator1.classList.remove("active");
+        stepIndicator2.classList.add("active");
+        const footerEl = cartStep2.querySelector(".cart-footer");
+        if (footerEl) footerEl.scrollTop = 0;
+    };
+    const voltarParaCarrinho = () => {
+        cartStep2.style.display = "none";
+        cartStep1.style.display = "flex";
+        stepIndicator2.classList.remove("active");
+        stepIndicator1.classList.add("active");
     };
 
     const animacaoVoarParaCarrinho = (productCard) => {
@@ -446,11 +471,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             discountLineElem.style.display = "none";
         }
         totalElem.textContent = formatarMoeda(total);
+        subtotalStep1Elem.textContent = formatarMoeda(subtotal);
+        totalStep1Elem.textContent = formatarMoeda(subtotal);
         cartBadge.textContent = carrinho.reduce(
             (acc, item) => acc + item.quantidade,
             0,
         );
         finishOrderBtn.disabled = carrinho.length === 0;
+        continuarDadosBtn.disabled = carrinho.length === 0;
 
         if (carrinho.length > 0 && window.innerWidth <= 768) {
             bannerTotalElem.textContent = formatarMoeda(total);
@@ -566,6 +594,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        // Abre a aba do WhatsApp JÁ AGORA (ainda em branco), antes de qualquer
+        // "await" — no celular, se o window.open vier depois de um await, o
+        // navegador não reconhece mais como ação direta do clique e bloqueia
+        // o pop-up silenciosamente.
+        const abaWhatsApp = window.open("", "_blank");
+
         const numeroWhatsApp = configLoja.whatsapp;
         const itensPedido = carrinho
             .map((item) => `  - ${item.quantidade}x ${item.nome}${item.variacaoEscolhida ? ` (${item.variacaoEscolhida})` : ""}`)
@@ -634,7 +668,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
-        window.open(url, "_blank");
+        if (abaWhatsApp) {
+            abaWhatsApp.location.href = url;
+        } else {
+            // navegador bloqueou mesmo assim (raro) — tenta de novo
+            window.open(url, "_blank");
+        }
     };
 
     // --- EVENT LISTENERS ---
@@ -643,6 +682,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     cartOverlay.addEventListener("click", fecharCarrinho);
     applyCouponBtn.addEventListener("click", applyCoupon);
     finishOrderBtn.addEventListener("click", finalizarPedido);
+    continuarDadosBtn.addEventListener("click", irParaEtapaDados);
+    voltarCarrinhoBtn.addEventListener("click", voltarParaCarrinho);
     viewCartBannerBtn.addEventListener("click", abrirCarrinho);
 
     // Event listener para botões de categoria (delegação, pois são renderizados dinamicamente)

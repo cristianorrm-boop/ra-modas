@@ -13,7 +13,7 @@
     <!-- Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Estilos -->
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20261020" />
     <title>RA Modas</title>
 
     <!-- App instalável (PWA) -->
@@ -105,8 +105,26 @@
             <button class="close-cart-btn" aria-label="Fechar carrinho">&times;</button>
         </div>
 
-        <div class="cart-body"></div>
+        <div class="cart-step-indicator" id="cart-step-indicator">
+            <span class="step active" id="step-indicator-1"><i class="fa-solid fa-cart-shopping"></i> Carrinho</span>
+            <span class="step-sep"><i class="fa-solid fa-chevron-right"></i></span>
+            <span class="step" id="step-indicator-2"><i class="fa-solid fa-truck-fast"></i> Dados e Pagamento</span>
+        </div>
 
+        <div class="cart-step" id="cart-step-1">
+            <div class="cart-body"></div>
+            <div class="cart-step1-resumo">
+                <div class="summary-line"><span>Subtotal</span><span id="cart-subtotal-step1">R$ 0,00</span></div>
+                <div class="summary-line total"><span>Total</span><span id="cart-total-step1">R$ 0,00</span></div>
+            </div>
+            <div class="finish-order-btn-container">
+                <button id="continuar-dados-btn" class="finish-order-btn" disabled>
+                    Continuar <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="cart-step" id="cart-step-2" style="display:none">
         <div class="cart-footer">
             <div class="options-toggle">
                 <button class="delivery-btn active" data-option="delivery">
@@ -135,7 +153,7 @@
 
                 <div class="form-group">
                     <label for="delivery-address">Endereço</label>
-                    <textarea id="delivery-address" placeholder="Lote, Quadra, Número" required></textarea>
+                    <textarea id="delivery-address" placeholder="Rua, Número, Bairro, Complemento" required></textarea>
                 </div>
 
                 <div class="delivery-fee-notice">
@@ -215,9 +233,13 @@
         </div>
 
         <div class="finish-order-btn-container">
+            <button id="voltar-carrinho-btn" class="btn-voltar-carrinho" type="button">
+                <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
             <button id="finish-order-btn" class="finish-order-btn" disabled>
                 <i class="fab fa-whatsapp"></i> Finalizar Pedido
             </button>
+        </div>
         </div>
     </aside>
 
@@ -232,8 +254,8 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="./firebase-config.js"></script>
-    <script src="./script.js"></script>
+    <script src="./firebase-config.js?v=20261020"></script>
+    <script src="./script.js?v=20261020"></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
