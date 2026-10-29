@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrar dados — RA Modas</title>
+  <!-- Utilitário de uso único: migra categorias/cupons pro formato do
+       loja-online e apaga produtos/pedidos/vendas antigos (formato
+       incompatível com o sistema novo). Pode rodar mais de uma vez sem
+       problema — reescrever categorias/cupons não duplica, e apagar o
+       que já está vazio não dá erro. -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #eee; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; color: #D6336C; }
+    p  { font-size: .9rem; color: #aaa; margin-bottom: 24px; text-align: center; max-width: 540px; }
+    #btn { padding: 14px 36px; background: #D6336C; color: #fff; font-size: 1rem; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; }
+    #btn:disabled { opacity: .45; cursor: not-allowed; }
+    #log  { margin-top: 24px; width: 100%; max-width: 560px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; font-size: .8rem; font-family: monospace; max-height: 400px; overflow-y: auto; }
+    #login-box { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-bottom: 20px; }
+    #login-box input { padding: 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #eee; font-size: .9rem; }
+    #login-error { color: #f44336; font-size: .8rem; display: none; }
+    .ok   { color: #4caf50; }
+    .err  { color: #f44336; }
+    .info { color: #90caf9; }
+  </style>
+</head>
+<body>
+
+<h1>Migrar dados — RA Modas</h1>
+<p>Faça login com o usuário admin e clique no botão. Isso recria as categorias e o cupom
+  existentes no formato do sistema novo, e apaga produtos/pedidos/vendas antigos
+  (formato incompatível). Pode rodar quantas vezes quiser.</p>
+
+<div id="login-box">
+  <input type="email" id="email-input" placeholder="E-mail do admin">
+  <input type="password" id="senha-input" placeholder="Senha">
+  <button id="login-btn">🔐 Entrar</button>
+  <span id="login-error">E-mail ou senha inválidos.</span>
+</div>
+
+<button id="btn" disabled>🔄 Migrar dados</button>
+
+<div id="log"><span class="info">Faça login para habilitar a migração.</span></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="./firebase-config.js"></script>
+
+<script>
+firebase.initializeApp(window.firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const log = document.getElementById("log");
+const btn = document.getElementById("btn");
+const loginBtn = document.getElementById("login-btn");
+const loginBox = document.getElementById("login-box");
+const loginError = document.getElementById("login-error");
+
+const addLog = (msg, tipo = "ok") => {
+  const span = document.createElement("span");
+  span.className = tipo;
+  span.textContent = msg;
+  log.appendChild(span);
+  log.appendChild(document.createElement("br"));
+  log.scrollTop = log.scrollHeight;
+};
+
+loginBtn.addEventListener("click", () => {
+  const email = document.getElementById("email-input").value.trim();
+  const senha = document.getElementById("senha-input").value;
+  loginError.style.display = "none";
+  auth.signInWithEmailAndPassword(email, senha).catch(() => {
+    loginError.style.display = "block";
+  });
+});
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginBox.style.display = "none";
+    btn.disabled = false;
+    log.innerHTML = "";
+    addLog(`✔ Logado como ${user.email}. Pronto pra migrar.`, "ok");
+  } else {
+    loginBox.style.display = "flex";
+    btn.disabled = true;
+  }
+});
+
+// Apaga todos os documentos de uma coleção, em lotes de até 400 (limite do batch do Firestore é 500).
+async function apagarColecao(nome) {
+  const snap = await db.collection(nome).get();
+  if (snap.empty) { addLog(`– ${nome}: já estava vazia`, "info"); return 0; }
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  addLog(`✔ ${nome}: ${docs.length} documento(s) apagado(s)`, "ok");
+  return docs.length;
+}
+
+btn.addEventListener("click", async () => {
+  btn.disabled = true;
+  log.innerHTML = "";
+  addLog("▶ Iniciando migração...", "info");
+
+  // 1) Categorias: reescreve no formato novo (só nome + icone; "ordem" não existe mais)
+  try {
+    const snap = await db.collection("categorias").get();
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      await db.collection("categorias").doc(doc.id).set({ nome: d.nome, icone: d.icone || "fa-tag" });
+    }
+    addLog(`✔ categorias: ${snap.size} migrada(s) pro formato novo`, "ok");
+  } catch (e) {
+    addLog(`✘ categorias — ${e.message}`, "err");
+  }
+
+  // 2) Cupons: reescreve "valorMinimo" -> "minimo"
+  try {
+    const snap = await db.collection("cupons").get();
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      await db.collection("cupons").doc(doc.id).set({
+        codigo: d.codigo, tipo: d.tipo, valor: d.valor,
+        minimo: d.minimo ?? d.valorMinimo ?? 0,
+        ativo: d.ativo !== false,
+      });
+    }
+    addLog(`✔ cupons: ${snap.size} migrado(s) pro formato novo`, "ok");
+  } catch (e) {
+    addLog(`✘ cupons — ${e.message}`, "err");
+  }
+
+  // 3) Produtos, pedidos, vendas: formato antigo incompatível — apaga tudo
+  try { await apagarColecao("produtos"); } catch (e) { addLog(`✘ produtos — ${e.message}`, "err"); }
+  try { await apagarColecao("pedidos"); } catch (e) { addLog(`✘ pedidos — ${e.message}`, "err"); }
+  try { await apagarColecao("vendas"); } catch (e) { addLog(`✘ vendas — ${e.message}`, "err"); }
+
+  // 4) tiposVariacao: coleção que não existe mais nas regras novas
+  try { await apagarColecao("tiposVariacao"); } catch (e) { addLog(`✘ tiposVariacao — ${e.message}`, "err"); }
+
+  addLog("", "info");
+  addLog("━━━ CONCLUÍDO ━━━", "info");
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>
