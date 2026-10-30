@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar produtos — RA Modas</title>
+  <!-- Utilitário de uso único: cadastra um catálogo fictício (4 produtos por
+       categoria) pra mostruário, sem precisar digitar um por um no admin.
+       Pode rodar mais de uma vez — produtos cujo nome já existe são pulados. -->
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #eee; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; color: #D6336C; }
+    p  { font-size: .9rem; color: #aaa; margin-bottom: 24px; text-align: center; max-width: 540px; }
+    #btn { padding: 14px 36px; background: #D6336C; color: #fff; font-size: 1rem; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: opacity .2s; }
+    #btn:disabled { opacity: .45; cursor: not-allowed; }
+    #log  { margin-top: 24px; width: 100%; max-width: 560px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; font-size: .8rem; font-family: monospace; max-height: 400px; overflow-y: auto; }
+    #login-box { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-bottom: 20px; }
+    #login-box input { padding: 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #eee; font-size: .9rem; }
+    #login-error { color: #f44336; font-size: .8rem; display: none; }
+    .ok   { color: #4caf50; }
+    .err  { color: #f44336; }
+    .info { color: #90caf9; }
+  </style>
+</head>
+<body>
+
+<h1>Importar produtos — RA Modas</h1>
+<p>Faça login com o usuário admin e clique no botão. Isso cadastra 20 produtos
+  fictícios (4 por categoria: Blusas, Calças, Shorts, Calçados e Acessórios),
+  cada um com nome, preço, descrição e foto real, prontos pro mostruário.
+  Produtos cujo nome já existir são pulados — pode rodar quantas vezes quiser.</p>
+
+<div id="login-box">
+  <input type="email" id="email-input" placeholder="E-mail do admin">
+  <input type="password" id="senha-input" placeholder="Senha">
+  <button id="login-btn">🔐 Entrar</button>
+  <span id="login-error">E-mail ou senha inválidos.</span>
+</div>
+
+<button id="btn" disabled>📦 Importar 20 produtos</button>
+
+<div id="log"><span class="info">Faça login para habilitar a importação.</span></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="./firebase-config.js"></script>
+
+<script>
+firebase.initializeApp(window.firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const log = document.getElementById("log");
+const btn = document.getElementById("btn");
+const loginBtn = document.getElementById("login-btn");
+const loginBox = document.getElementById("login-box");
+const loginError = document.getElementById("login-error");
+
+const addLog = (msg, tipo = "ok") => {
+  const span = document.createElement("span");
+  span.className = tipo;
+  span.textContent = msg;
+  log.appendChild(span);
+  log.appendChild(document.createElement("br"));
+  log.scrollTop = log.scrollHeight;
+};
+
+loginBtn.addEventListener("click", () => {
+  const email = document.getElementById("email-input").value.trim();
+  const senha = document.getElementById("senha-input").value;
+  loginError.style.display = "none";
+  auth.signInWithEmailAndPassword(email, senha).catch(() => {
+    loginError.style.display = "block";
+  });
+});
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginBox.style.display = "none";
+    btn.disabled = false;
+    log.innerHTML = "";
+    addLog(`✔ Logado como ${user.email}. Pronto pra importar.`, "ok");
+  } else {
+    loginBox.style.display = "flex";
+    btn.disabled = true;
+  }
+});
+
+// [nome, categoria, preco, precoAntigo, estoque, descricao, imagem]
+const IMG = {
+  blusa1: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=75",
+  blusa2: "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=600&q=75",
+  calca1: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&q=75",
+  calca2: "https://images.unsplash.com/photo-1475178626620-a4d074967452?w=600&q=75",
+  shorts1: "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=600&q=75",
+  calcado1: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&q=75",
+  calcado2: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&q=75",
+  acessorio1: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=75",
+  acessorio2: "https://images.unsplash.com/photo-1559563458-527698bf5295?w=600&q=75",
+};
+
+const PRODUTOS = [
+  ["Blusa Cropped Canelada", "blusas", 49.9, 0, 22, "Blusa cropped em malha canelada com toque macio, alças finas e caimento justo. Peça coringa pra looks casuais.", IMG.blusa1],
+  ["Camisa Oversized em Linho", "blusas", 89.9, 0, 15, "Camisa de botões em linho misto, modelagem ampla e caimento fluido. Vai do trabalho ao happy hour.", IMG.blusa2],
+  ["Body Manga Longa Gola Alta", "blusas", 59.9, 0, 18, "Body de manga longa com gola alta e tecido de ótima elasticidade. Ideal pra sobreposições.", IMG.blusa1],
+  ["Blusa de Tricô Decote V", "blusas", 79.9, 0, 14, "Blusa de tricô leve com decote V e detalhes canelados nas mangas. Perfeita pra meia-estação.", IMG.blusa2],
+
+  ["Calça Jeans Mom Destroyed", "calças", 129.9, 159.9, 16, "Cintura alta, modelagem mom e detalhes destroyed. Clássica e versátil.", IMG.calca1],
+  ["Calça Jeans Skinny Lavagem Clara", "calças", 99.9, 0, 20, "Modelagem skinny, cintura média e lavagem clara. Confortável pro dia a dia.", IMG.calca2],
+  ["Calça Legging Suplex", "calças", 69.9, 0, 28, "Tecido suplex com ótimo caimento, cintura alta e bolso lateral. Ideal pra treino ou casual.", IMG.calca1],
+  ["Calça Alfaiataria Pantalona", "calças", 119.9, 149.9, 12, "Modelagem pantalona em tecido alfaiataria, cai muito bem. Elegante pro trabalho.", IMG.calca2],
+
+  ["Short Jeans Cintura Alta", "shorts", 79.9, 0, 24, "Short jeans destroyed, cintura alta e barra dobrada. Queridinho do verão.", IMG.shorts1],
+  ["Short Alfaiataria", "shorts", 69.9, 0, 16, "Short de alfaiataria com cinto, caimento reto. Combina com blazer ou camisa.", IMG.shorts1],
+  ["Short Saia Moletom", "shorts", 54.9, 0, 20, "Short saia em moletom, confortável e despojado. Perfeito pro dia a dia.", IMG.shorts1],
+  ["Short Liganete Básico", "shorts", 39.9, 0, 30, "Short liganete básico, leve e confortável. Várias cores disponíveis.", IMG.shorts1],
+
+  ["Sandália Salto Bloco", "calçados", 139.9, 179.9, 14, "Sandália com salto bloco confortável e tiras finas. Pro dia e a noite.", IMG.calcado1],
+  ["Tênis Casual Branco", "calçados", 159.9, 0, 18, "Tênis branco básico, solado leve. Combina com tudo.", IMG.calcado2],
+  ["Scarpin Verniz", "calçados", 119.9, 0, 10, "Scarpin de verniz, bico fino e salto médio. Elegante pra ocasiões especiais.", IMG.calcado1],
+  ["Rasteirinha Trançada", "calçados", 89.9, 0, 22, "Rasteirinha trançada em material sintético. Confortável pro dia a dia.", IMG.calcado2],
+
+  ["Bolsa Transversal Pequena", "acessórios", 99.9, 0, 15, "Bolsa transversal pequena, alça ajustável e fecho magnético. Prática pra sair.", IMG.acessorio1],
+  ["Óculos de Sol Redondo", "acessórios", 59.9, 0, 25, "Óculos de sol redondo com proteção UV400. Retrô e estiloso.", IMG.acessorio2],
+  ["Relógio Feminino Slim", "acessórios", 149.9, 189.9, 12, "Relógio slim com pulseira de aço, resistente a respingos. Discreto e elegante.", IMG.acessorio2],
+  ["Colar Camadas Dourado", "acessórios", 44.9, 0, 20, "Colar com camadas folheado a ouro. Peça coringa pra compor looks.", IMG.acessorio1],
+];
+
+btn.addEventListener("click", async () => {
+  btn.disabled = true;
+  log.innerHTML = "";
+  addLog("▶ Iniciando importação...", "info");
+
+  try {
+    const snap = await db.collection("produtos").get();
+    const nomesExistentes = new Set(snap.docs.map(d => (d.data().nome || "").toLowerCase()));
+
+    const batch = db.batch();
+    let novos = 0;
+    PRODUTOS.forEach(([nome, categoria, preco, precoAntigo, estoque, descricao, imagem], i) => {
+      if (nomesExistentes.has(nome.toLowerCase())) { addLog(`– ${nome}: já existe, pulado`, "info"); return; }
+      const ref = db.collection("produtos").doc();
+      batch.set(ref, {
+        nome, categoria, preco, precoAntigo, custo: 0, estoque, descricao,
+        destaque: !!precoAntigo, ativo: true, variantes: [], imagem,
+        codigo: "RM" + String(i + 1).padStart(3, "0"),
+      });
+      novos++;
+    });
+
+    if (novos > 0) await batch.commit();
+    addLog(`✔ ${novos} produto(s) novo(s) cadastrado(s)`, "ok");
+  } catch (e) {
+    addLog(`✘ Erro: ${e.message}`, "err");
+  }
+
+  addLog("", "info");
+  addLog("━━━ CONCLUÍDO ━━━", "info");
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>
