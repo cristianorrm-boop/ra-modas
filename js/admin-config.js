@@ -22,7 +22,7 @@ window.Admin.modulos.push((A) => {
   const area = (rot, nome, v, linhas = 2, dica = "") => `<label>${rot}<textarea name="${nome}" rows="${linhas}">${esc(v ?? "")}</textarea>${dica ? `<small class="dica">${dica}</small>` : ""}</label>`;
   const marcar = (rot, nome, on, dica = "") => `<label class="check"><input type="checkbox" name="${nome}" ${on ? "checked" : ""} /> <span>${rot}${dica ? `<small class="dica">${dica}</small>` : ""}</span></label>`;
   const escolha = (rot, nome, atual, opcoes, dica = "") => `<label>${rot}<select name="${nome}">${opcoes.map(([v, t]) => `<option value="${v}" ${String(v) === String(atual) ? "selected" : ""}>${t}</option>`).join("")}</select>${dica ? `<small class="dica">${dica}</small>` : ""}</label>`;
-  const cor = (rot, nome, v) => `<label class="cor-campo">${rot}<span><input type="color" name="${nome}" value="${esc(v)}" /><code>${esc(v)}</code></span></label>`;
+  const cor = (rot, nome, v) => `<label class="cor-campo">${rot}<span><input type="color" name="${nome}" value="${esc(v)}" /><input type="text" class="cor-hex" data-para="${nome}" value="${esc(v)}" maxlength="7" placeholder="#000000" /></span></label>`;
   const grade = (...itens) => `<div class="cfg-grade">${itens.join("")}</div>`;
   const titulo = (t, dica = "") => `<h3 class="cfg-sub">${t}</h3>${dica ? `<p class="dica">${dica}</p>` : ""}`;
 
@@ -331,9 +331,20 @@ window.Admin.modulos.push((A) => {
       prev.style.setProperty("--rr", { reto: "4px", suave: "10px", arredondado: "20px" }[v("cantos")] || "10px");
       prev.style.fontFamily = { sistema: "system-ui, sans-serif", elegante: "Georgia, serif", moderna: '"Trebuchet MS", sans-serif' }[v("fonte")];
       $("#pl-nome").textContent = v("nomeLoja") || "Loja";
-      form.querySelectorAll('input[type="color"]').forEach((i) => { const code = i.parentElement.querySelector("code"); if (code) code.textContent = i.value; });
+      form.querySelectorAll('input[type="color"]').forEach((i) => {
+        const hex = form.querySelector(`.cor-hex[data-para="${i.name}"]`);
+        if (hex && document.activeElement !== hex) hex.value = i.value;
+      });
     };
     form.addEventListener("input", atualizarPrevia);
+    // digitar um hex válido (#rrggbb) no campo de texto atualiza o seletor de cor nativo
+    form.querySelectorAll(".cor-hex").forEach((hex) => {
+      hex.addEventListener("input", () => {
+        let val = hex.value.trim();
+        if (val && !val.startsWith("#")) val = "#" + val;
+        if (/^#[0-9a-fA-F]{6}$/.test(val)) { form.elements[hex.dataset.para].value = val.toLowerCase(); atualizarPrevia(); sujo(); }
+      });
+    });
     atualizarPrevia();
     $("#cores-padrao").onclick = () => {
       ["corPrimaria", "corSecundaria", "corDestaque", "corFundo", "corTexto"].forEach((n) => { form.elements[n].value = padrao[n]; });

@@ -265,7 +265,7 @@ tfoot td { background: #f9fafb; }
 label small.dica { display: block; font-weight: 400; margin-top: 2px; }
 .cor-campo > span { display: flex; align-items: center; gap: 10px; }
 .cor-campo input[type="color"] { width: 54px; height: 38px; padding: 2px; cursor: pointer; }
-.cor-campo code { color: var(--suave); font-size: .8rem; }
+.cor-campo .cor-hex { width: 90px; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 6px; background: #fff; color: var(--texto); font-family: monospace; font-size: .85rem; text-transform: lowercase; }
 .dias-semana { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
 .dias-semana > span { font-size: .85rem; color: var(--suave); width: 100%; }
 .cfg-campos { display: grid; border: 1px solid var(--borda); border-radius: 10px; overflow: hidden; }
