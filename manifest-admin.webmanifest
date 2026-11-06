@@ -1,13 +1,13 @@
 {
   "id": "./admin.html",
-  "name": "Loja Online — Administração",
+  "name": "RA Modas — Administração",
   "short_name": "Admin",
   "description": "Painel administrativo da loja.",
   "start_url": "./admin.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "background_color": "#16181d",
+  "theme_color": "#16181d",
   "lang": "pt-BR",
   "icons": [
     {
